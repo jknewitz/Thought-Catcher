@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Thought Catcher</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Inconsolata:wght@300;400&display=swap');
+
+    :root {
+      --bg:    #0f0e0d; --bg2: #1a1815; --bg3: #252320;
+      --bdr:   #2a2520; --bdrh: #3a3530;
+      --text:  #e8e0d5; --dim: #8a7e6e; --muted: #4a4038;
+      --gold:  #c8a97e; --green: #8ab880; --red: #c87e7e;
+      --blue:  #7eb8c8; --purple: #b87ec8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Inconsolata', monospace; font-size: 13px;
+      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    .header { padding: 12px 14px 8px; border-bottom: 1px solid var(--bdr); flex-shrink: 0; }
+    .logo   { font-family: 'Cormorant Garamond', serif; font-size: 16px; color: var(--gold); letter-spacing: 1px; }
+    .appt-box { margin-top:7px; padding:7px 10px; background:var(--bg2); border-left:2px solid var(--gold); border-radius:1px; }
+    .appt-subject { font-size:12px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .appt-meta    { font-size:10px; color:var(--muted); margin-top:2px; }
+
+    .tabs { display:flex; border-bottom:1px solid var(--bdr); flex-shrink:0; overflow-x:auto; }
+    .tabs::-webkit-scrollbar { height:0; }
+    .tab {
+      flex-shrink:0; padding:8px 10px; background:none; border:none; cursor:pointer;
+      font-family:'Inconsolata',monospace; font-size:10px; letter-spacing:1.2px;
+      text-transform:uppercase; color:var(--muted);
+      border-bottom:2px solid transparent; transition:all 0.15s; white-space:nowrap;
+    }
+    .tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+    .tab:hover:not(.active) { color:var(--dim); }
+    .tab .bdg {
+      display:inline-block; background:var(--bg3); color:var(--dim);
+      font-size:9px; padding:1px 5px; border-radius:8px; margin-left:4px;
+    }
+    .tab.active .bdg { background:var(--gold); color:var(--bg); }
+
+    .content { flex:1; overflow-y:auto; padding:13px; }
+    .content::-webkit-scrollbar { width:3px; }
+    .content::-webkit-scrollbar-thumb { background:var(--bdrh); }
+
+    .sec { font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+    .divider { border:none; border-top:1px solid var(--bdr); margin:12px 0; }
+
+    /* Thought card */
+    .tc {
+      background:var(--bg2); border:1px solid var(--bdr); border-radius:1px;
+      padding:9px 11px; margin-bottom:7px; transition:border-color 0.15s; position:relative;
+    }
+    .tc:hover { border-color:var(--bdrh); }
+    .tc .cat  { font-size:9px; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+    .tc .txt  { font-size:12px; color:var(--text); line-height:1.5; }
+    .tc .tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:5px; }
+    .tc .tag  { font-size:9px; padding:1px 6px; background:var(--bg3); color:var(--muted); border-radius:1px; }
+    .tc .meta { font-size:9px; color:var(--muted); margin-top:4px; }
+    .tc .del  {
+      position:absolute; top:7px; right:8px; background:none; border:none;
+      color:var(--muted); cursor:pointer; font-size:10px; opacity:0; transition:opacity 0.15s;
+    }
+    .tc:hover .del { opacity:1; }
+    .tc .del:hover { color:var(--red); }
+
+    /* Person note entry */
+    .ne {
+      padding:8px 10px; background:var(--bg2); border:1px solid var(--bdr);
+      border-left:2px solid var(--purple); border-radius:1px; margin-bottom:6px;
+      font-size:12px; color:var(--text); line-height:1.5; position:relative;
+    }
+    .ne:hover .deln { opacity:1; }
+    .deln {
+      position:absolute; top:6px; right:8px; background:none; border:none;
+      color:var(--muted); cursor:pointer; font-size:10px; opacity:0; transition:opacity 0.15s;
+    }
+    .deln:hover { color:var(--red); }
+    .ne-meta { font-size:9px; color:var(--muted); margin-top:4px; }
+
+    /* Person index row */
+    .prow {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:9px 12px; background:var(--bg2); border:1px solid var(--bdr);
+      border-radius:1px; margin-bottom:6px; cursor:pointer; transition:border-color 0.15s;
+    }
+    .prow:hover { border-color:var(--bdrh); }
+    .prow-name  { font-size:13px; color:var(--text); }
+    .prow-count { font-size:10px; color:var(--purple); }
+
+    textarea {
+      width:100%; background:var(--bg2); border:1px solid var(--bdr); border-radius:1px;
+      color:var(--text); font-family:'Inconsolata',monospace; font-size:13px;
+      padding:9px 11px; resize:vertical; outline:none; line-height:1.5; transition:border-color 0.2s;
+    }
+    textarea:focus { border-color:var(--gold); }
+    textarea::placeholder { color:var(--muted); }
+
+    input[type=text] {
+      flex:1; background:var(--bg2); border:1px solid var(--bdr); border-radius:1px;
+      color:var(--text); font-family:'Inconsolata',monospace; font-size:13px;
+      padding:8px 10px; outline:none; transition:border-color 0.2s;
+    }
+    input[type=text]:focus { border-color:var(--purple); }
+
+    .btn {
+      width:100%; margin-top:7px; padding:8px; border:none; border-radius:1px;
+      font-family:'Inconsolata',monospace; font-size:10px; letter-spacing:2px;
+      text-transform:uppercase; cursor:pointer; transition:opacity 0.2s;
+    }
+    .btn-g { background:var(--gold);   color:var(--bg); }
+    .btn-p { background:var(--purple); color:var(--bg); }
+    .btn:disabled { opacity:0.3; cursor:default; }
+    .btn:hover:not(:disabled) { opacity:0.85; }
+
+    .status { margin-top:7px; padding:7px 11px; border-radius:1px; font-size:11px; text-align:center; }
+    .ok  { background:#1a2518; border:1px solid #3a5030; color:var(--green); }
+    .err { background:#251818; border:1px solid #503030; color:var(--red);   }
+    .ask { background:#1a1a25; border:1px solid #303050; color:var(--blue);  }
+
+    .empty { text-align:center; padding:28px 16px; color:var(--muted); font-size:12px; line-height:1.8; }
+    .back-btn {
+      background:none; border:none; color:var(--dim); font-family:inherit;
+      font-size:10px; letter-spacing:1px; cursor:pointer; margin-bottom:12px;
+      padding:0; text-transform:uppercase;
+    }
+    .src-badge {
+      display:inline-block; font-size:9px; padding:1px 6px; border-radius:1px;
+      background:var(--bg3); color:var(--dim); margin-left:6px; vertical-align:middle;
+    }
+    .person-header {
+      display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;
+    }
+    .person-name  { font-size:14px; color:var(--purple); letter-spacing:0.5px; }
+    .person-count { font-size:10px; color:var(--muted); }
+
+    .loading::after { content:''; animation:dots 1.2s steps(3,end) infinite; }
+    @keyframes dots { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} 100%{content:''} }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span class="logo">Thought Catcher</span>
+    <span id="count-badge" style="font-size:10px;color:var(--muted);letter-spacing:1px"></span>
+  </div>
+  <div class="appt-box" id="appt-box" style="display:none">
+    <div class="appt-subject" id="appt-subject"></div>
+    <div class="appt-meta"   id="appt-meta"></div>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" onclick="switchTab('relevant')" id="tab-relevant">◈ Relevant</button>
+  <button class="tab"        onclick="switchTab('persons')"  id="tab-persons">Personen</button>
+  <button class="tab"        onclick="switchTab('add')"      id="tab-add">+ Einfall</button>
+  <button class="tab"        onclick="switchTab('all')"      id="tab-all">Alle</button>
+</div>
+
+<div class="content" id="content">
+  <div class="empty"><span class="loading">Lade</span></div>
+</div>
+
+<script>
+const TKEY = 'thought-catcher-v1';
+const PKEY = 'thought-catcher-persons-v1';
+const MDL  = 'claude-sonnet-4-20250514';
+
+let thoughts    = [];
+let personNotes = {};   // { "Name": [{id,text,timestamp,apptContext}] }
+let appt        = null; // {subject,body,attendeeNames,detectedPersons}
+let curTab      = 'relevant';
+let curPerson   = null;
+let fromIndex   = false;
+let stTimer     = null;
+
+// ── Storage ──────────────────────────────────────────────
+function loadAll() {
+  try { thoughts    = JSON.parse(localStorage.getItem(TKEY) || '[]'); } catch { thoughts=[]; }
+  try { personNotes = JSON.parse(localStorage.getItem(PKEY) || '{}'); } catch { personNotes={}; }
+}
+function saveAll() {
+  try { localStorage.setItem(TKEY, JSON.stringify(thoughts));    } catch {}
+  try { localStorage.setItem(PKEY, JSON.stringify(personNotes)); } catch {}
+}
+
+// ── Office Init ──────────────────────────────────────────
+Office.onReady(async (info) => {
+  loadAll(); updateBadges();
+  if (info.host === Office.HostType.Outlook) {
+    try { await loadAppt(); } catch(e){ console.warn(e); }
+  }
+  renderTab('relevant');
+});
+
+async function loadAppt() {
+  const item = Office.context.mailbox.item;
+  if (!item) return;
+  const subject = item.subject || '';
+  let body = '', attendees = [];
+
+  await new Promise(r => {
+    if (item.body?.getAsync)
+      item.body.getAsync(Office.CoercionType.Text, {}, res => { if(res.status===Office.AsyncResultStatus.Succeeded) body=res.value||''; r(); });
+    else r();
+  });
+
+  for (const field of [item.requiredAttendees, item.optionalAttendees]) {
+    if (!field?.getAsync) continue;
+    await new Promise(r => field.getAsync(res => {
+      if (res.status===Office.AsyncResultStatus.Succeeded)
+        res.value.forEach(a => { if(a.displayName) attendees.push(a.displayName); });
+      r();
+    }));
+  }
+
+  const detected = await detectPersons(subject + '\n' + body, attendees);
+  appt = { subject, body, attendeeNames: attendees, detectedPersons: detected };
+  showApptInfo();
+  buildPersonTabs();
+}
+
+async function detectPersons(text, known) {
+  const set = new Set(known.map(n=>n.trim()).filter(Boolean));
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:MDL, max_tokens:300,
+        system:'Extrahiere alle Personennamen aus dem Text. Antworte NUR mit einem JSON-Array von Strings, kein Markdown. Nur echte Personennamen, keine Firmen oder Orte.',
+        messages:[{role:'user', content: text.slice(0,1500)}]
+      })
+    });
+    const data = await resp.json();
+    const names = JSON.parse((data.content?.[0]?.text||'[]').replace(/```json|```/g,'').trim());
+    names.forEach(n => { if(n&&n.length>1) set.add(n.trim()); });
+  } catch {
+    const m = text.matchAll(/\b([A-ZÄÖÜ][a-zäöüß]+)\s+([A-ZÄÖÜ][a-zäöüß]+)\b/g);
+    for (const x of m) set.add(x[0]);
+  }
+  return [...set];
+}
+
+function showApptInfo() {
+  if (!appt) return;
+  document.getElementById('appt-box').style.display='block';
+  document.getElementById('appt-subject').textContent = appt.subject || 'Termin';
+  document.getElementById('appt-meta').textContent = appt.detectedPersons.slice(0,4).join(', ') || '';
+}
+
+function buildPersonTabs() {
+  if (!appt?.detectedPersons?.length) return;
+  const bar = document.getElementById('tabs');
+  bar.querySelectorAll('.ptab').forEach(t=>t.remove());
+  appt.detectedPersons.slice(0,5).forEach(name => {
+    const btn = document.createElement('button');
+    const n   = (personNotes[name]||[]).length;
+    btn.className = 'tab ptab';
+    btn.id = 'tab-p-' + sid(name);
+    btn.innerHTML = `${e(name)}${n>0?`<span class="bdg">${n}</span>`:''}`;
+    btn.onclick   = () => openPerson(name, false);
+    bar.appendChild(btn);
+  });
+}
+
+function sid(n) { return n.replace(/[^a-z0-9]/gi,'_'); }
+
+// ── Tab routing ───────────────────────────────────────────
+function switchTab(tab) {
+  curTab='relevant_or_'+tab; // avoids collision with person tab
+  curTab=tab; curPerson=null; fromIndex=false;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab)?.classList.add('active');
+  renderTab(tab);
+}
+
+function openPerson(name, fi) {
+  curTab='person'; curPerson=name; fromIndex=fi;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const el = document.getElementById('tab-p-'+sid(name)) || document.getElementById('tab-persons');
+  el?.classList.add('active');
+  renderPersonDetail(name, fi);
+}
+
+function renderTab(tab) {
+  if      (tab==='relevant') renderRelevant();
+  else if (tab==='persons')  renderPersonsIndex();
+  else if (tab==='add')      renderAdd();
+  else if (tab==='all')      renderAll();
+}
+
+// ── Relevant ─────────────────────────────────────────────
+async function renderRelevant() {
+  const c = document.getElementById('content');
+  if (!appt) { c.innerHTML=`<div class="empty">Kein Termin erkannt.</div>`; return; }
+  if (!thoughts.length && !Object.keys(personNotes).length) {
+    c.innerHTML=`<div class="empty">Noch keine Einträge gespeichert.</div>`; return;
+  }
+  c.innerHTML=`<div class="empty"><span class="loading">Suche relevante Inhalte</span></div>`;
+
+  // Person notes for detected persons
+  const matched = {};
+  appt.detectedPersons.forEach(n => { if((personNotes[n]||[]).length) matched[n]=personNotes[n]; });
+
+  // Thoughts via Claude
+  let mThoughts = [];
+  if (thoughts.length) {
+    try {
+      const ctx = [appt.subject,...appt.detectedPersons].join(', ');
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model:MDL, max_tokens:300,
+          system:'Antworte NUR mit JSON-Array von numerischen IDs. Kein Markdown.',
+          messages:[{role:'user',content:
+            `Termin: "${ctx}"\n\nRelevante IDs:\n`+
+            thoughts.map(t=>`ID ${t.id}: ${t.text} (Person:${t.person||'—'} Tags:${t.tags.join(',')})`).join('\n')
+          }]
+        })
+      });
+      const data = await resp.json();
+      const ids  = JSON.parse((data.content?.[0]?.text||'[]').replace(/```json|```/g,'').trim());
+      mThoughts  = thoughts.filter(t=>ids.includes(t.id));
+    } catch {
+      const terms = appt.detectedPersons.map(s=>s.toLowerCase());
+      mThoughts   = thoughts.filter(t => {
+        const h=(t.text+' '+(t.person||'')).toLowerCase();
+        return terms.some(term=>term.split(' ').some(w=>w.length>3&&h.includes(w)));
+      });
+    }
+  }
+
+  const hasPn = Object.keys(matched).length>0;
+  const hasTh = mThoughts.length>0;
+  if (!hasPn && !hasTh) { c.innerHTML=`<div class="empty">Keine Einträge zu diesem Termin.</div>`; return; }
+  c.innerHTML='';
+
+  if (hasPn) {
+    addSec(c,'Personen-Notizen');
+    Object.entries(matched).forEach(([name,notes]) => {
+      const h=document.createElement('div');
+      h.style.cssText='color:var(--purple);font-size:11px;margin:8px 0 5px;letter-spacing:0.5px;cursor:pointer;';
+      h.textContent='◉ '+name;
+      h.onclick=()=>openPerson(name,false);
+      c.appendChild(h);
+      [...notes].reverse().forEach(n=>c.appendChild(mkNoteEl(n,name,false)));
+    });
+  }
+  if (hasPn&&hasTh) { const d=document.createElement('hr'); d.className='divider'; c.appendChild(d); }
+  if (hasTh) {
+    addSec(c,`${mThoughts.length} Einfall${mThoughts.length!==1?'e':''}`);
+    mThoughts.forEach(t=>c.appendChild(mkCard(t)));
+  }
+}
+
+// ── Persons Index ─────────────────────────────────────────
+function renderPersonsIndex() {
+  const c = document.getElementById('content');
+  const all = Object.keys(personNotes).filter(n=>personNotes[n].length);
+  if (!all.length) {
+    c.innerHTML=`<div class="empty">Noch keine Personen-Notizen.<br><br>Öffne einen Termin und klicke<br>auf den Namen-Tab der Person.</div>`;
+  } else {
+    c.innerHTML=`<div class="sec">${all.length} Person${all.length!==1?'en':''}</div>`;
+    all.sort().forEach(name => {
+      const row=document.createElement('div'); row.className='prow';
+      row.innerHTML=`<span class="prow-name">${e(name)}</span><span class="prow-count">${personNotes[name].length} Notiz${personNotes[name].length!==1?'en':''}</span>`;
+      row.onclick=()=>openPerson(name,true);
+      c.appendChild(row);
+    });
+  }
+
+  // Add person manually
+  const add=document.createElement('div'); add.style.marginTop='16px';
+  add.innerHTML=`
+    <div class="sec" style="margin-bottom:8px">Person manuell hinzufügen</div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="new-person" placeholder="Name…" onkeydown="if(event.key==='Enter')addPerson()"/>
+      <button class="btn btn-p" style="width:auto;padding:8px 14px;margin:0" onclick="addPerson()">+</button>
+    </div>`;
+  c.appendChild(add);
+}
+
+function addPerson() {
+  const inp=document.getElementById('new-person');
+  const name=(inp?.value||'').trim(); if(!name) return;
+  if(!personNotes[name]) personNotes[name]=[];
+  saveAll(); openPerson(name,true);
+}
+
+// ── Person Detail ─────────────────────────────────────────
+function renderPersonDetail(name, fi) {
+  const c    = document.getElementById('content');
+  const notes= (personNotes[name]||[]).slice().reverse();
+  c.innerHTML='';
+
+  const back=document.createElement('button'); back.className='back-btn';
+  back.textContent='← Zurück';
+  back.onclick=()=>fi?switchTab('persons'):(curPerson=null,renderTab('relevant'));
+  c.appendChild(back);
+
+  const ph=document.createElement('div');
+  ph.innerHTML=`<div class="person-header"><span class="person-name">◉ ${e(name)}</span><span class="person-count">${notes.length} Notiz${notes.length!==1?'en':''}</span></div>`;
+  c.appendChild(ph);
+
+  if (notes.length) {
+    notes.forEach(n=>c.appendChild(mkNoteEl(n,name,true)));
+    const d=document.createElement('hr'); d.className='divider'; c.appendChild(d);
+  }
+
+  const ns=document.createElement('div');
+  ns.innerHTML=`
+    <div class="sec" style="margin-bottom:8px">Neue Notiz</div>
+    <textarea id="pn-ta" rows="3" placeholder="Notiz zu ${e(name)}… (Ctrl+Enter)"></textarea>
+    <button class="btn btn-p" onclick="savePNote('${e(name)}')">Speichern</button>
+    <div id="pn-st"></div>`;
+  c.appendChild(ns);
+
+  const ta=document.getElementById('pn-ta');
+  if(ta){ ta.focus(); ta.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.ctrlKey)savePNote(name);}); }
+}
+
+function mkNoteEl(note, personName, withDel) {
+  const el=document.createElement('div'); el.className='ne';
+  el.innerHTML=`
+    ${withDel?`<button class="deln" onclick="delPNote('${e(personName)}',${note.id})">✕</button>`:''}
+    ${e(note.text)}
+    <div class="ne-meta">${fmt(note.timestamp)}${note.apptContext?' · '+e(note.apptContext):''}</div>`;
+  return el;
+}
+
+function savePNote(name) {
+  const ta=document.getElementById('pn-ta'), st=document.getElementById('pn-st');
+  const text=(ta?.value||'').trim(); if(!text) return;
+  if(!personNotes[name]) personNotes[name]=[];
+  personNotes[name].push({id:Date.now(),text,timestamp:new Date().toISOString(),apptContext:appt?.subject||null});
+  saveAll(); updateBadges(); updPTab(name);
+  if(ta) ta.value='';
+  if(st){st.className='status ok';st.textContent='got it';}
+  clearTimeout(stTimer);
+  stTimer=setTimeout(()=>{ renderPersonDetail(name,fromIndex); },1600);
+}
+
+function delPNote(name,id) {
+  if(!personNotes[name]) return;
+  personNotes[name]=personNotes[name].filter(n=>n.id!==id);
+  saveAll(); updateBadges(); updPTab(name);
+  renderPersonDetail(name,fromIndex);
+}
+
+function updPTab(name) {
+  const el=document.getElementById('tab-p-'+sid(name)); if(!el) return;
+  const n=(personNotes[name]||[]).length;
+  el.innerHTML=`${e(name)}${n>0?`<span class="bdg">${n}</span>`:''}`;
+}
+
+// ── Add Thought ───────────────────────────────────────────
+function renderAdd() {
+  const c=document.getElementById('content');
+  const hint=appt?.subject?`<div style="font-size:10px;color:var(--muted);margin-bottom:10px;padding:6px 10px;background:var(--bg2);border-left:2px solid var(--gold)">${e(appt.subject)}</div>`:'';
+  c.innerHTML=`${hint}<textarea id="ti" rows="4" placeholder="Gedanke, Einfall, Notiz… (Ctrl+Enter)"></textarea><button class="btn btn-g" onclick="saveThought()">Speichern</button><div id="ts"></div>`;
+  const ta=document.getElementById('ti');
+  if(ta){ta.focus();ta.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.ctrlKey)saveThought();});}
+}
+
+async function saveThought() {
+  const ta=document.getElementById('ti'), st=document.getElementById('ts');
+  const text=(ta?.value||'').trim(); if(!text) return;
+  try {
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:MDL,max_tokens:300,
+        system:'Analysiere kurze Notizen. Antworte NUR mit JSON, kein Markdown:\n{"category":"customer|project|note|reminder","person":"Name oder null","tags":["tag1"],"clear":true}',
+        messages:[{role:'user',content:text}]})});
+    const data=await resp.json();
+    const p=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim());
+    if(p.clear===false){if(st){st.className='status ask';st.textContent='Kannst du das präzisieren?';}return;}
+    push({id:Date.now(),text,category:p.category||'note',person:p.person||null,tags:p.tags||[],
+      timestamp:new Date().toISOString(),apptContext:appt?.subject||null});
+  } catch {
+    push({id:Date.now(),text,category:'note',person:null,tags:[],
+      timestamp:new Date().toISOString(),apptContext:appt?.subject||null});
+  }
+  if(ta) ta.value='';
+  if(st){st.className='status ok';st.textContent='got it';}
+  clearTimeout(stTimer);
+  stTimer=setTimeout(()=>renderAdd(),1600);
+}
+
+function push(t){thoughts=[t,...thoughts];saveAll();updateBadges();}
+
+// ── All ───────────────────────────────────────────────────
+function renderAll() {
+  const c=document.getElementById('content');
+  if(!thoughts.length){c.innerHTML=`<div class="empty">Noch keine Einträge.</div>`;return;}
+  c.innerHTML=`<div class="sec">${thoughts.length} Einträge</div>`;
+  thoughts.forEach(t=>c.appendChild(mkCard(t)));
+}
+
+// ── Card factory ──────────────────────────────────────────
+const CC={customer:'#c8a97e',project:'#7eb8c8',note:'#a8c87e',reminder:'#c87e9a'};
+const CI={customer:'◈',project:'◆',note:'◇',reminder:'◉'};
+const CL={customer:'Kunde',project:'Projekt',note:'Notiz',reminder:'Erinnerung'};
+
+function mkCard(t) {
+  const col=CC[t.category]||'#8a7e6e',ic=CI[t.category]||'◇',lb=CL[t.category]||t.category;
+  const el=document.createElement('div'); el.className='tc';
+  el.style.borderLeft=`2px solid ${col}`;
+  el.innerHTML=`
+    <button class="del" onclick="delThought(${t.id})">✕</button>
+    <div class="cat" style="color:${col}">${ic} ${lb}${t.person?' · '+e(t.person):''}</div>
+    <div class="txt">${e(t.text)}</div>
+    ${t.tags.length?`<div class="tags">${t.tags.map(x=>`<span class="tag">${e(x)}</span>`).join('')}</div>`:''}
+    <div class="meta">${fmt(t.timestamp)}${t.apptContext?` · <span class="src-badge">${e(t.apptContext)}</span>`:''}</div>`;
+  return el;
+}
+
+function delThought(id){thoughts=thoughts.filter(t=>t.id!==id);saveAll();updateBadges();renderTab(curTab==='person'?'relevant':curTab);}
+
+// ── Helpers ───────────────────────────────────────────────
+function updateBadges() {
+  const pCount=Object.values(personNotes).reduce((s,a)=>s+a.length,0);
+  const total=thoughts.length+pCount;
+  const cb=document.getElementById('count-badge');
+  if(cb) cb.textContent=total>0?`${total} gespeichert`:'';
+  const pt=document.getElementById('tab-persons');
+  if(pt){const p=Object.keys(personNotes).filter(n=>personNotes[n].length).length;
+    pt.innerHTML=`Personen${p>0?`<span class="bdg">${p}</span>`:''}`;
+  }
+}
+function addSec(parent,text){const s=document.createElement('div');s.className='sec';s.textContent=text;parent.appendChild(s);}
+function fmt(iso){return new Date(iso).toLocaleDateString('de-DE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}
+function e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+</script>
+</body>
+</html>
